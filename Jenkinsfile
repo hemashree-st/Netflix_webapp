@@ -109,7 +109,7 @@ pipeline{
             steps {
                 sh "sudo docker stop my_app_container || true"
                 sh "sudo docker rm my_app_container || true"
-                sh "sudo docker run -d --name my_app_container -p 8080:8080 ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}"
+                sh "sudo docker run -d --name my_app_container -p 8084:8080 ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}"
             }
             post{
                 success{
