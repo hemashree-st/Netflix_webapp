@@ -47,7 +47,7 @@ pipeline{
                 withCredentials([usernamePassword(credentialsId: env.DOCKER_CRED_ID,
                                                  usernameVariable: 'DOCKER_USER',
                                                  passwordVariable: 'DOCKER_PASS')]) {
-                    sh "docker login -u $DOCKER_USER -p $DOCKER_PASS"
+                    sh "sudo docker login -u $DOCKER_USER -p $DOCKER_PASS"
                 }
             }
             post{
@@ -62,8 +62,8 @@ pipeline{
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} ."
-                sh "docker tag ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} ${env.DOCKER_HUB_REPO}:${env.IMAGE_LATEST}"
+                sh "sudo docker build -t ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} ."
+                sh "sudo docker tag ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} ${env.DOCKER_HUB_REPO}:${env.IMAGE_LATEST}"
             }
             post{
                 success{
@@ -77,8 +77,8 @@ pipeline{
 
         stage('Push to Docker Hub') {
             steps {
-                sh "docker push ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}"
-                sh "docker push ${env.DOCKER_HUB_REPO}:${env.IMAGE_LATEST}"
+                sh "sudo docker push ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}"
+                sh "sudo docker push ${env.DOCKER_HUB_REPO}:${env.IMAGE_LATEST}"
             }
             post{
                 success{
@@ -92,8 +92,8 @@ pipeline{
 
         stage('Clean Up Local Images') {
             steps {
-                sh "docker rmi ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} || true"
-                sh "docker rmi ${env.DOCKER_HUB_REPO}:${env.IMAGE_LATEST} || true"
+                sh "sudo docker rmi ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} || true"
+                sh "sudo docker rmi ${env.DOCKER_HUB_REPO}:${env.IMAGE_LATEST} || true"
             }
             post{
                 success{
@@ -107,9 +107,9 @@ pipeline{
 
         stage('Run Container') {
             steps {
-                sh "docker stop my_app_container || true"
-                sh "docker rm my_app_container || true"
-                sh "docker run -d --name my_app_container -p 8080:8080 ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}"
+                sh "sudo docker stop my_app_container || true"
+                sh "sudo docker rm my_app_container || true"
+                sh "sudo docker run -d --name my_app_container -p 8080:8080 ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}"
             }
             post{
                 success{
