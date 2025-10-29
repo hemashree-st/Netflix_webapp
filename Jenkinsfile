@@ -1,125 +1,85 @@
 pipeline{
     agent any
-
     tools{
-        maven 'maven'
+        maven 'maven' 
     }
-    
     environment {
-        DOCKER_HUB_USERNAME = 'hemashree642'
-        DOCKER_CRED_ID      = 'admin'
-        IMAGE_TAG       = "${env.BUILD_NUMBER}"
-        IMAGE_LATEST    = 'latest'
+        DOCKERHUB_CREDENTIALS_ID = 'admin' 
+        DOCKERHUB_USERNAME       = 'hemashree642'
+        IMAGE_NAME               = "${env.DOCKERHUB_USERNAME}/my-app"
+        CONTAINER_NAME           = "my_container"
     }
-
-    stages {
-        stage('src pull') {
+    stages{
+        stage('Github src') {
             steps {
-                git 'https://github.com/hemashree-st/Netflix_webapp.git'
-            }
-            post{
-                success{
-                    echo "successfully pulled"
-                }
-                failure{
-                    echo "unable to pull"
-                }
+                echo 'Checking out source code...'
+                git branch: 'master', url: 'https://github.com/hemashree-st/Netflix_webapp'
             }
         }
 
-        stage('Build stage') {
-            steps {
-                sh 'mvn clean package -DskipTests'
-                
-            }
-            post{
-                success{
-                    echo "Build success"
-                }
-                failure{
-                    echo "Build failure"
-                }
-            }
-        }
-
-        stage('Docker Hub Login') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: env.DOCKER_CRED_ID,
-                                                 usernameVariable: 'DOCKER_USER',
-                                                 passwordVariable: 'DOCKER_PASS')]) {
-                    sh "sudo docker login -u $DOCKER_USER -p $DOCKER_PASS"
-                }
-            }
-            post{
-                success{
-                    echo "login successful"
-                }
-                failure{
-                    echo "login failed"
-                }
+        stage('Build stage'){
+            steps{
+                echo 'Building with Maven...'
+                sh 'mvn clean package'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "sudo docker build -t ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} ."
-                sh "sudo docker tag ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} ${env.DOCKER_HUB_REPO}:${env.IMAGE_LATEST}"
+                echo "Building Docker image: ${IMAGE_NAME}:${BUILD_NUMBER}"
+                sh "sudo docker build -t ${IMAGE_NAME}:${BUILD_NUMBER} ."
             }
-            post{
-                success{
-                    echo "docker image built successfully"
-                }
-                failure{
-                    echo "failed to build docker image"
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                echo 'Logging in to Docker Hub...'
+                withCredentials([usernamePassword(credentialsId: env.DOCKERHUB_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo $DOCKER_PASS | sudo docker login -u $DOCKER_USER --password-stdin'
                 }
             }
         }
 
-        stage('Push to Docker Hub') {
+        stage('Tag and Push Docker Image') {
             steps {
-                sh "sudo docker push ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}"
-                sh "sudo docker push ${env.DOCKER_HUB_REPO}:${env.IMAGE_LATEST}"
-            }
-            post{
-                success{
-                    echo "docker image pushed successfully"
-                }
-                failure{
-                    echo "failed to push docker image"
+                script {
+                    echo "Pushing image: ${IMAGE_NAME}:${BUILD_NUMBER}"
+                    sh "sudo docker push ${IMAGE_NAME}:${BUILD_NUMBER}"
+                    
+                    echo "Tagging as 'latest'..."
+                    sh "sudo docker tag ${IMAGE_NAME}:${BUILD_NUMBER} ${IMAGE_NAME}:latest"
+                    
+                    echo "Pushing 'latest' tag..."
+                    sh "sudo docker push ${IMAGE_NAME}:latest"
                 }
             }
         }
 
-        stage('Clean Up Local Images') {
+        stage('Remove Local Docker Image') {
             steps {
-                sh "sudo docker rmi ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG} || true"
-                sh "sudo docker rmi ${env.DOCKER_HUB_REPO}:${env.IMAGE_LATEST} || true"
-            }
-            post{
-                success{
-                    echo "local image cleaned successfully"
-                }
-                failure{
-                    echo "failed to clean local images"
-                }
+                echo "Removing local image: ${IMAGE_NAME}:${BUILD_NUMBER}"
+                sh "sudo docker rmi ${IMAGE_NAME}:${BUILD_NUMBER}"
             }
         }
 
         stage('Run Container') {
             steps {
-                sh "sudo docker stop my_app_container || true"
-                sh "sudo docker rm my_app_container || true"
-                sh "sudo docker run -d --name my_app_container -p 8084:8080 ${env.DOCKER_HUB_REPO}:${env.IMAGE_TAG}"
-            }
-            post{
-                success{
-                    echo "container is running successfully"
-                }
-                failure{
-                    echo "failed to run the container"
-                }
+                echo "Running new container ${CONTAINER_NAME} on port 8084..."
+                sh "sudo docker stop ${CONTAINER_NAME} || true"
+                sh "sudo docker rm ${CONTAINER_NAME} || true"
+                sh "sudo docker run -d -p 8084:8080 --name ${CONTAINER_NAME} ${IMAGE_NAME}:latest"
             }
         }
-}
-
+    }
+    post {
+        always {
+            echo 'This will always run after the stages are complete.'
+        }
+        success {
+            echo 'This will run only if the pipeline succeeds.'
+        }
+        failure {
+            echo 'This will run only if the pipeline fails.'
+        }
+    }
 }
