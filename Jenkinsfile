@@ -15,7 +15,7 @@ pipeline{
     stages {
         stage('src pull') {
             steps {
-                git branch:"master" url:https://github.com/hemashree-st/Netflix_webapp.git""
+                git 'https://github.com/hemashree-st/Netflix_webapp.git'
             }
             post{
                 success{
