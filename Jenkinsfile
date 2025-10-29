@@ -7,7 +7,7 @@ pipeline{
     
     environment {
         DOCKER_HUB_USERNAME = 'hemashree642'
-        DOCKER_CRED_ID      = 'dockerhub-credentials-id'
+        DOCKER_CRED_ID      = 'admin'
         IMAGE_TAG       = "${env.BUILD_NUMBER}"
         IMAGE_LATEST    = 'latest'
     }
